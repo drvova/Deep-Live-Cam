@@ -55,6 +55,7 @@ jobs:
                   pip install protobuf==4.25.1
                   pip install pygrabber
                   pip install tensorflow
+                  pip install matplotlib
                   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
                   pip install "pyinstaller>=6.0.0"
               shell: pwsh
@@ -123,7 +124,15 @@ jobs:
                     --hidden-import=onnxruntime.capi `
                     --hidden-import=insightface `
                     --hidden-import=insightface.app `
+                    --hidden-import=insightface.app.common `
+                    --hidden-import=insightface.app.face_analysis `
+                    --hidden-import=insightface.app.mask_renderer `
                     --hidden-import=insightface.model_zoo `
+                    --hidden-import=insightface.thirdparty `
+                    --hidden-import=insightface.thirdparty.face3d `
+                    --hidden-import=insightface.thirdparty.face3d.mesh `
+                    --hidden-import=insightface.thirdparty.face3d.mesh.vis `
+                    --hidden-import=insightface.utils `
                     --hidden-import=tensorflow `
                     --hidden-import=torch `
                     --hidden-import=torchvision `
@@ -135,11 +144,14 @@ jobs:
                     --hidden-import=jaraco.text `
                     --hidden-import=jaraco.functools `
                     --hidden-import=jaraco.context `
+                    --hidden-import=matplotlib `
+                    --hidden-import=matplotlib.pyplot `
+                    --hidden-import=matplotlib.backends `
+                    --hidden-import=matplotlib.backends.backend_agg `
                     --collect-all=customtkinter `
                     --collect-all=onnxruntime `
                     --collect-all=insightface `
-                    --exclude-module=matplotlib `
-                    --exclude-module=pandas `
+                    --collect-all=matplotlib `
                     --exclude-module=IPython `
                     --exclude-module=jupyter `
                     --exclude-module=notebook `
@@ -202,6 +214,7 @@ jobs:
                   pip install opennsfw2==0.10.2
                   pip install protobuf==4.25.1
                   pip install tensorflow
+                  pip install matplotlib
                   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
                   pip install "pyinstaller>=6.0.0"
 
@@ -225,14 +238,18 @@ jobs:
                     --hidden-import=modules \
                     --hidden-import=modules.core.app \
                     --hidden-import=modules.config.globals \
+                    --hidden-import=insightface \
+                    --hidden-import=insightface.app \
+                    --hidden-import=insightface.thirdparty.face3d \
                     --hidden-import=tensorflow \
                     --hidden-import=torch \
                     --hidden-import=torchvision \
                     --hidden-import=cv2_enumerate_cameras \
+                    --hidden-import=matplotlib \
                     --collect-all=customtkinter \
                     --collect-all=onnxruntime \
-                    --exclude-module=matplotlib \
-                    --exclude-module=pandas \
+                    --collect-all=insightface \
+                    --collect-all=matplotlib \
                     run.py
 
             - name: Verify build
