@@ -1,18 +1,25 @@
-import os 
-import cv2
-import numpy as np
+"""
+Deep-Live-Cam modules package.
 
-# Utility function to support unicode characters in file paths for reading
-def imread_unicode(path, flags=cv2.IMREAD_COLOR):
-    return cv2.imdecode(np.fromfile(path, dtype=np.uint8), flags)
+This package provides the core functionality for face swapping and enhancement.
 
-# Utility function to support unicode characters in file paths for writing
-def imwrite_unicode(path, img, params=None):
-    root, ext = os.path.splitext(path)
-    if not ext:
-        ext = ".png"
-        result, encoded_img = cv2.imencode(ext, img, params if params else [])
-        result, encoded_img = cv2.imencode(f".{ext}", img, params if params is not None else [])
-        encoded_img.tofile(path)
-        return True
-    return False
+New Structure:
+    - config/     : Configuration and global settings
+    - core/       : Core application logic and types
+    - face/       : Face detection, analysis, and clustering
+    - media/      : Video/image capture and FFmpeg utilities
+    - processors/ : Frame processors (swapper, enhancer, masking)
+    - ui/         : User interface components
+    - i18n/       : Internationalization support
+"""
+
+# Backward compatibility imports
+from modules.config import globals, metadata
+from modules.core.types import Face, Frame
+
+__all__ = [
+    "globals",
+    "metadata",
+    "Face",
+    "Frame",
+]

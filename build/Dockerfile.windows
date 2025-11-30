@@ -1,0 +1,58 @@
+# Dockerfile for cross-compiling Deep-Live-Cam to Windows .exe using Wine
+# Based on cdrx/pyinstaller-windows docker image concept
+
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install Wine and dependencies
+RUN dpkg --add-architecture i386 && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        wine64 \
+        wine32 \
+        winetricks \
+        wget \
+        curl \
+        ca-certificates \
+        cabextract \
+        xvfb \
+        p7zip-full \
+        unzip \
+        && rm -rf /var/lib/apt/lists/*
+
+# Set up Wine
+ENV WINEPREFIX=/wine
+ENV WINEARCH=win64
+ENV WINEDEBUG=-all
+
+# Initialize Wine
+RUN wineboot --init && \
+    winetricks -q vcrun2019 && \
+    winetricks -q win10
+
+# Download and install Python for Windows
+ARG PYTHON_VERSION=3.10.11
+RUN wget -q https://www.python.org/ftp/python/${PYTHON_VERSION}/python-${PYTHON_VERSION}-amd64.exe -O /tmp/python.exe && \
+    xvfb-run wine /tmp/python.exe /quiet InstallAllUsers=1 PrependPath=1 Include_test=0 && \
+    rm /tmp/python.exe
+
+# Set Wine Python path
+ENV WINE_PYTHON="wine python"
+
+# Create working directory
+WORKDIR /src
+
+# Install PyInstaller and base dependencies in Wine Python
+RUN $WINE_PYTHON -m pip install --upgrade pip && \
+    $WINE_PYTHON -m pip install pyinstaller
+
+# Copy requirements and install dependencies
+COPY requirements-windows.txt /src/
+RUN $WINE_PYTHON -m pip install -r requirements-windows.txt || true
+
+# Entry point for building
+COPY build-windows.sh /build-windows.sh
+RUN chmod +x /build-windows.sh
+
+ENTRYPOINT ["/build-windows.sh"]
