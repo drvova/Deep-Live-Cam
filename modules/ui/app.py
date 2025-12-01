@@ -1,8 +1,10 @@
 import json
 import os
 import platform
+import sys
 import time
 import webbrowser
+from pathlib import Path
 from typing import Callable, Tuple
 
 import customtkinter as ctk
@@ -27,8 +29,17 @@ from modules.media import (
     has_image_extension,
     is_image,
     is_video,
-    resolve_relative_path,
 )
+
+
+def get_theme_path() -> str:
+    """Get the theme.json path, works for both dev and frozen environments."""
+    if getattr(sys, "frozen", False):
+        base_path = Path(sys._MEIPASS)
+        return str(base_path / "modules" / "ui" / "theme.json")
+    return str(Path(__file__).parent / "theme.json")
+
+
 from modules.media.video_capture import VideoCapturer
 from modules.processors.registry import get_frame_processors_modules
 
@@ -129,9 +140,7 @@ def load_switch_states():
         config.fp_ui = switch_states.get("fp_ui", {"face_enhancer": False})
         config.show_fps = switch_states.get("show_fps", False)
         config.mouth_mask = switch_states.get("mouth_mask", False)
-        config.show_mouth_mask_box = switch_states.get(
-            "show_mouth_mask_box", False
-        )
+        config.show_mouth_mask_box = switch_states.get("show_mouth_mask_box", False)
     except FileNotFoundError:
         # If the file doesn't exist, use default values
         pass
@@ -144,7 +153,7 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
 
     ctk.deactivate_automatic_dpi_awareness()
     ctk.set_appearance_mode("system")
-    ctk.set_default_color_theme(resolve_relative_path("ui.json"))
+    ctk.set_default_color_theme(get_theme_path())
 
     root = ctk.CTk()
     root.minsize(ROOT_WIDTH, ROOT_HEIGHT)
@@ -651,9 +660,7 @@ def update_tumbler(var: str, value: bool) -> None:
     # If we're currently in a live preview, update the frame processors
     if PREVIEW.state() == "normal":
         global frame_processors
-        frame_processors = get_frame_processors_modules(
-            config.frame_processors
-        )
+        frame_processors = get_frame_processors_modules(config.frame_processors)
 
 
 def select_source_path() -> None:
@@ -835,9 +842,7 @@ def update_preview(frame_number: int = 0) -> None:
         temp_frame = get_video_frame(config.target_path, frame_number)
         if config.nsfw_filter and check_and_ignore_nsfw(temp_frame):
             return
-        for frame_processor in get_frame_processors_modules(
-            config.frame_processors
-        ):
+        for frame_processor in get_frame_processors_modules(config.frame_processors):
             temp_frame = frame_processor.process_frame(
                 get_one_face(cv2.imread(config.source_path)), temp_frame
             )

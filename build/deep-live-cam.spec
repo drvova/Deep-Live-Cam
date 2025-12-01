@@ -13,11 +13,18 @@ For one-file build:
 import os
 import sys
 from pathlib import Path
+from PyInstaller.utils.hooks import collect_all, collect_data_files, collect_submodules
 
 block_cipher = None
 
 # Project root directory (one level up from build/)
 PROJECT_ROOT = Path(SPECPATH).parent.resolve()
+
+# Collect all customtkinter data
+ctk_datas, ctk_binaries, ctk_hiddenimports = collect_all('customtkinter')
+
+# Collect all onnxruntime data
+onnx_datas, onnx_binaries, onnx_hiddenimports = collect_all('onnxruntime')
 
 # Collect data files
 datas = [
@@ -27,15 +34,21 @@ datas = [
     # Localization files
     (str(PROJECT_ROOT / 'locales'), 'locales'),
 
-    # Models directory (if models are bundled)
-    # (str(PROJECT_ROOT / 'models'), 'models'),
-
     # Media assets
     (str(PROJECT_ROOT / 'media'), 'media'),
 
-    # tkinter fix module
+    # tkinter fix module - bundle as a Python file at root
     (str(PROJECT_ROOT / 'tkinter_fix.py'), '.'),
 ]
+
+# Add collected data
+datas += ctk_datas
+datas += onnx_datas
+
+# Binaries
+binaries = []
+binaries += ctk_binaries
+binaries += onnx_binaries
 
 # Hidden imports for dynamic loading
 hiddenimports = [
@@ -109,17 +122,30 @@ hiddenimports = [
     # Additional dependencies
     'psutil',
     'pygrabber',
+    'pygrabber.dshow_graph',
     'cv2_enumerate_cameras',
+
+    # Jaraco packages (required by pkg_resources)
+    'jaraco',
+    'jaraco.text',
+    'jaraco.functools',
+    'jaraco.context',
+
+    # pkg_resources dependencies
+    'platformdirs',
+    'pkg_resources',
+    'setuptools',
 ]
 
-# Binary files to include
-binaries = []
+# Add collected hidden imports
+hiddenimports += ctk_hiddenimports
+hiddenimports += onnx_hiddenimports
 
 # Exclude unnecessary modules to reduce size
 excludes = [
     'matplotlib',
     'pandas',
-    'scipy.spatial.cKDTree',  # Not needed
+    'scipy.spatial.cKDTree',
     'IPython',
     'jupyter',
     'notebook',
@@ -165,7 +191,12 @@ pyz = PYZ(
     cipher=block_cipher
 )
 
+# Determine icon path
+icon_path = PROJECT_ROOT / 'media' / 'icon.ico'
+icon_arg = str(icon_path) if icon_path.exists() else None
+
 # Main executable
+# NOTE: console=True is enabled for debugging - set to False for release builds
 exe = EXE(
     pyz,
     a.scripts,
@@ -181,13 +212,13 @@ exe = EXE(
         'python*.dll',
         'onnxruntime*.dll',
     ],
-    console=False,  # Set to True for debugging
+    console=True,  # ENABLED for debugging - set to False for production
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=str(PROJECT_ROOT / 'media' / 'icon.ico') if (PROJECT_ROOT / 'media' / 'icon.ico').exists() else None,
+    icon=icon_arg,
     version_file=None,
 )
 
