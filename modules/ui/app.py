@@ -30,14 +30,12 @@ from modules.media import (
     is_image,
     is_video,
 )
+from modules.utils.frozen_env import FrozenEnv
 
 
 def get_theme_path() -> str:
-    """Get the theme.json path, works for both dev and frozen environments."""
-    if getattr(sys, "frozen", False):
-        base_path = Path(sys._MEIPASS)
-        return str(base_path / "modules" / "ui" / "theme.json")
-    return str(Path(__file__).parent / "theme.json")
+    """Get the theme.json path, works in both dev and frozen environments."""
+    return FrozenEnv.get_path("modules", "ui", "theme.json")
 
 
 from modules.media.video_capture import VideoCapturer

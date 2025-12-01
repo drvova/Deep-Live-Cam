@@ -1,15 +1,12 @@
 import json
-import os
-import sys
 from pathlib import Path
+
+from modules.utils.frozen_env import FrozenEnv
 
 
 def get_locales_path():
-    """Get the locales directory path, works for both dev and frozen environments."""
-    if getattr(sys, "frozen", False):
-        base_path = sys._MEIPASS
-        return Path(base_path) / "locales"
-    return Path(__file__).parent.parent.parent / "locales"
+    """Get the locales directory path, works in both dev and frozen environments."""
+    return Path(FrozenEnv.get_path("locales"))
 
 
 class LanguageManager:

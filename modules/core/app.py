@@ -1,11 +1,17 @@
 import os
 import sys
 
+from modules.utils.frozen_env import FrozenEnv
+
 # single thread doubles cuda performance - needs to be set before torch import
 if any(arg.startswith("--execution-provider") for arg in sys.argv):
     os.environ["OMP_NUM_THREADS"] = "1"
 # reduce tensorflow log level
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+
+# Setup frozen environment if needed
+FrozenEnv.setup()
+
 import argparse
 import platform
 import shutil
