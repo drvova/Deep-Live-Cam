@@ -1,0 +1,289 @@
+name: Build Release
+
+on:
+    push:
+        tags:
+            - "v*"
+        branches:
+            - main
+    pull_request:
+        branches:
+            - main
+    workflow_dispatch:
+        inputs:
+            build_windows:
+                description: "Build Windows executable"
+                required: true
+                default: true
+                type: boolean
+            build_linux:
+                description: "Build Linux executable"
+                required: true
+                default: false
+                type: boolean
+
+jobs:
+    build-windows:
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_windows }}
+        runs-on: windows-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.10"
+                  cache: "pip"
+
+            - name: Install dependencies
+              run: |
+                  python -m pip install --upgrade pip
+                  pip install "numpy>=1.23.5,<2"
+                  pip install "typing-extensions>=4.8.0"
+                  pip install opencv-python==4.10.0.84
+                  pip install cv2_enumerate_cameras==1.1.15
+                  pip install onnx==1.18.0
+                  pip install insightface==0.7.3
+                  pip install psutil==5.9.8
+                  pip install tk==0.1.0
+                  pip install customtkinter==5.2.2
+                  pip install pillow==11.1.0
+                  pip install onnxruntime-gpu==1.22.0
+                  pip install opennsfw2==0.10.2
+                  pip install protobuf==4.25.1
+                  pip install pygrabber
+                  pip install tensorflow
+                  pip install matplotlib
+                  pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+                  pip install "pyinstaller>=6.0.0"
+              shell: pwsh
+
+            - name: Install GFPGAN and BasicSR
+              run: |
+                  pip install git+https://github.com/xinntao/BasicSR.git@master
+                  pip install git+https://github.com/TencentARC/GFPGAN.git@master
+              shell: pwsh
+              continue-on-error: true
+
+            - name: Download models
+              run: |
+                  mkdir -p models
+                  curl -L -o models/inswapper_128_fp16.onnx "https://huggingface.co/hacksider/deep-live-cam/resolve/main/inswapper_128_fp16.onnx?download=true"
+                  curl -L -o models/GFPGANv1.4.pth "https://github.com/TencentARC/GFPGAN/releases/download/v1.3.4/GFPGANv1.4.pth"
+              shell: bash
+
+            - name: Build Windows executable
+              run: |
+                  pyinstaller --clean --noconfirm `
+                    --name=Deep-Live-Cam `
+                    --onedir `
+                    --windowed `
+                    --add-data="modules/ui/theme.json;modules/ui" `
+                    --add-data="locales;locales" `
+                    --add-data="media;media" `
+                    --add-data="models;models" `
+                    --add-data="tkinter_fix.py;." `
+                    --hidden-import=modules `
+                    --hidden-import=modules.core `
+                    --hidden-import=modules.core.app `
+                    --hidden-import=modules.core.types `
+                    --hidden-import=modules.config `
+                    --hidden-import=modules.config.globals `
+                    --hidden-import=modules.config.metadata `
+                    --hidden-import=modules.face `
+                    --hidden-import=modules.face.analyser `
+                    --hidden-import=modules.face.cluster `
+                    --hidden-import=modules.face.predicter `
+                    --hidden-import=modules.media `
+                    --hidden-import=modules.media.ffmpeg `
+                    --hidden-import=modules.media.capturer `
+                    --hidden-import=modules.media.video_capture `
+                    --hidden-import=modules.processors `
+                    --hidden-import=modules.processors.registry `
+                    --hidden-import=modules.processors.frame `
+                    --hidden-import=modules.processors.frame.swapper `
+                    --hidden-import=modules.processors.frame.enhancer `
+                    --hidden-import=modules.processors.frame.masking `
+                    --hidden-import=modules.ui `
+                    --hidden-import=modules.ui.app `
+                    --hidden-import=modules.ui.fix `
+                    --hidden-import=modules.i18n `
+                    --hidden-import=modules.i18n.manager `
+                    --hidden-import=cv2 `
+                    --hidden-import=numpy `
+                    --hidden-import=PIL `
+                    --hidden-import=PIL.Image `
+                    --hidden-import=PIL.ImageTk `
+                    --hidden-import=customtkinter `
+                    --hidden-import=tkinter `
+                    --hidden-import=tkinter.filedialog `
+                    --hidden-import=tkinter.messagebox `
+                    --hidden-import=onnxruntime `
+                    --hidden-import=onnxruntime.capi `
+                    --hidden-import=insightface `
+                    --hidden-import=insightface.app `
+                    --hidden-import=insightface.app.common `
+                    --hidden-import=insightface.app.face_analysis `
+                    --hidden-import=insightface.app.mask_renderer `
+                    --hidden-import=insightface.model_zoo `
+                    --hidden-import=insightface.thirdparty `
+                    --hidden-import=insightface.thirdparty.face3d `
+                    --hidden-import=insightface.thirdparty.face3d.mesh `
+                    --hidden-import=insightface.thirdparty.face3d.mesh.vis `
+                    --hidden-import=insightface.utils `
+                    --hidden-import=tensorflow `
+                    --hidden-import=torch `
+                    --hidden-import=torchvision `
+                    --hidden-import=psutil `
+                    --hidden-import=pygrabber `
+                    --hidden-import=cv2_enumerate_cameras `
+                    --hidden-import=platformdirs `
+                    --hidden-import=jaraco `
+                    --hidden-import=jaraco.text `
+                    --hidden-import=jaraco.functools `
+                    --hidden-import=jaraco.context `
+                    --hidden-import=matplotlib `
+                    --hidden-import=matplotlib.pyplot `
+                    --hidden-import=matplotlib.backends `
+                    --hidden-import=matplotlib.backends.backend_agg `
+                    --collect-all=customtkinter `
+                    --collect-all=onnxruntime `
+                    --collect-all=insightface `
+                    --collect-all=matplotlib `
+                    --exclude-module=IPython `
+                    --exclude-module=jupyter `
+                    --exclude-module=notebook `
+                    --exclude-module=pytest `
+                    --exclude-module=sphinx `
+                    run.py
+              shell: pwsh
+
+            - name: Verify build
+              run: |
+                  dir dist\Deep-Live-Cam
+                  dist\Deep-Live-Cam\Deep-Live-Cam.exe --version
+              shell: cmd
+
+            - name: Create ZIP archive
+              run: |
+                  Compress-Archive -Path dist\Deep-Live-Cam\* -DestinationPath Deep-Live-Cam-Windows-x64.zip
+              shell: pwsh
+
+            - name: Upload Windows artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: Deep-Live-Cam-Windows-x64
+                  path: Deep-Live-Cam-Windows-x64.zip
+                  retention-days: 30
+
+    build-linux:
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_linux }}
+        runs-on: ubuntu-22.04
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.10"
+                  cache: "pip"
+
+            - name: Install system dependencies
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y python3-tk
+
+            - name: Install dependencies
+              run: |
+                  python -m pip install --upgrade pip
+                  pip install "numpy>=1.23.5,<2"
+                  pip install "typing-extensions>=4.8.0"
+                  pip install opencv-python==4.10.0.84
+                  pip install cv2_enumerate_cameras==1.1.15
+                  pip install onnx==1.18.0
+                  pip install insightface==0.7.3
+                  pip install psutil==5.9.8
+                  pip install tk==0.1.0
+                  pip install customtkinter==5.2.2
+                  pip install pillow==11.1.0
+                  pip install onnxruntime-gpu==1.22.0
+                  pip install opennsfw2==0.10.2
+                  pip install protobuf==4.25.1
+                  pip install tensorflow
+                  pip install matplotlib
+                  pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+                  pip install "pyinstaller>=6.0.0"
+
+            - name: Download models
+              run: |
+                  mkdir -p models
+                  curl -L -o models/inswapper_128_fp16.onnx "https://huggingface.co/hacksider/deep-live-cam/resolve/main/inswapper_128_fp16.onnx?download=true"
+                  curl -L -o models/GFPGANv1.4.pth "https://github.com/TencentARC/GFPGAN/releases/download/v1.3.4/GFPGANv1.4.pth"
+
+            - name: Build Linux executable
+              run: |
+                  pyinstaller --clean --noconfirm \
+                    --name=Deep-Live-Cam \
+                    --onedir \
+                    --windowed \
+                    --add-data="modules/ui/theme.json:modules/ui" \
+                    --add-data="locales:locales" \
+                    --add-data="media:media" \
+                    --add-data="models:models" \
+                    --add-data="tkinter_fix.py:." \
+                    --hidden-import=modules \
+                    --hidden-import=modules.core.app \
+                    --hidden-import=modules.config.globals \
+                    --hidden-import=insightface \
+                    --hidden-import=insightface.app \
+                    --hidden-import=insightface.thirdparty.face3d \
+                    --hidden-import=tensorflow \
+                    --hidden-import=torch \
+                    --hidden-import=torchvision \
+                    --hidden-import=cv2_enumerate_cameras \
+                    --hidden-import=matplotlib \
+                    --collect-all=customtkinter \
+                    --collect-all=onnxruntime \
+                    --collect-all=insightface \
+                    --collect-all=matplotlib \
+                    run.py
+
+            - name: Verify build
+              run: |
+                  ls -la dist/Deep-Live-Cam/
+                  ./dist/Deep-Live-Cam/Deep-Live-Cam --version
+
+            - name: Create tarball
+              run: |
+                  cd dist
+                  tar -czvf ../Deep-Live-Cam-Linux-x64.tar.gz Deep-Live-Cam/
+
+            - name: Upload Linux artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: Deep-Live-Cam-Linux-x64
+                  path: Deep-Live-Cam-Linux-x64.tar.gz
+                  retention-days: 30
+
+    release:
+        needs: [build-windows, build-linux]
+        runs-on: ubuntu-latest
+        if: startsWith(github.ref, 'refs/tags/')
+
+        steps:
+            - name: Download all artifacts
+              uses: actions/download-artifact@v4
+
+            - name: Create Release
+              uses: softprops/action-gh-release@v1
+              with:
+                  files: |
+                      Deep-Live-Cam-Windows-x64/Deep-Live-Cam-Windows-x64.zip
+                      Deep-Live-Cam-Linux-x64/Deep-Live-Cam-Linux-x64.tar.gz
+                  generate_release_notes: true
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
